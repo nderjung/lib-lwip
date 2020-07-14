@@ -4,7 +4,6 @@
 #include <uk/config.h>
 
 #ifdef CONFIG_LWIP_SOCKET
-#include <lwip/sockets.h>
 /* Taken from musl's netinet/in.h */
 #ifdef CONFIG_LWIP_IPV6
 #define IN6_IS_ADDR_MULTICAST(a) (((uint8_t *) (a))[0] == 0xff)
