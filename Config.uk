@@ -157,8 +157,8 @@ config LWIP_DNS_TABLE_SIZE
 endif
 
 config LWIP_SOCKET
-	bool "Socket API"
-	select LIBVFSCORE
+	bool "Provide POSIX socket API"
+	select LIBPOSIX_SOCKET
 	depends on LWIP_THREADS && (LWIP_UDP || LWIP_TCP)
 	default y
 
