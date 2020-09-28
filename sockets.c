@@ -43,15 +43,9 @@ struct lwip_socket {
   int lwip_fd;
 };
 
-int
-lwip_lib_socket_init(struct posix_socket_driver *d)
-{
-  return 0;
-}
-
 static void *
-lwip_glue_create(struct posix_socket_driver *d,
-          int family, int type, int protocol)
+lwip_glue_create(struct posix_socket_driver *d, int family, int type,
+          int protocol)
 {
   void *ret = NULL;
   struct lwip_socket *lwip_sock;
@@ -83,8 +77,7 @@ LWIP_SOCKET_CLEANUP:
 }
 
 static void *
-lwip_glue_accept(struct posix_socket_driver *d,
-          void *sock, struct sockaddr *restrict addr,
+lwip_glue_accept(struct posix_socket_file *sock, struct sockaddr *restrict addr,
           socklen_t *restrict addr_len)
 {
   void *ret = NULL;
@@ -92,18 +85,19 @@ lwip_glue_accept(struct posix_socket_driver *d,
   struct lwip_socket *new_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = NULL;
-    SOCKET_LIB_ERR(d, -1, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, -1, "failed to identify socket descriptor");
     goto EXIT;
   }
 
   /* Use our socket data store to hold onto LwIP's file descriptor. */
-  new_sock = uk_calloc(d->allocator, 1, sizeof(struct lwip_socket));
+  new_sock = uk_calloc(sock->driver->allocator, 1, sizeof(struct lwip_socket));
   if (!new_sock) {
     ret = NULL;
-    SOCKET_LIB_ERR(d, -1, "could not allocate socket: out of memory");
+    SOCKET_LIB_ERR(sock->driver, -1,
+      "could not allocate socket: out of memory");
     goto EXIT;
   }
   
@@ -121,22 +115,22 @@ EXIT:
   return ret;
 
 LWIP_SOCKET_CLEANUP:
-  uk_free(d->allocator, new_sock);
+  uk_free(sock->driver->allocator, new_sock);
   goto EXIT;
 }
 
 static int
-lwip_glue_bind(struct posix_socket_driver *d,
-          void *sock, const struct sockaddr *addr, socklen_t addr_len)
+lwip_glue_bind(struct posix_socket_file *sock, const struct sockaddr *addr, 
+          socklen_t addr_len)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
   
@@ -150,17 +144,16 @@ EXIT:
 }
 
 static int
-lwip_glue_shutdown(struct posix_socket_driver *d,
-          void *sock, int how)
+lwip_glue_shutdown(struct posix_socket_file *sock, int how)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
   
@@ -174,18 +167,17 @@ EXIT:
 }
 
 static int
-lwip_glue_getpeername(struct posix_socket_driver *d,
-          void *sock, struct sockaddr *restrict addr,
-          socklen_t *restrict addr_len)
+lwip_glue_getpeername(struct posix_socket_file *sock,
+          struct sockaddr *restrict addr, socklen_t *restrict addr_len)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
 
@@ -199,18 +191,17 @@ EXIT:
 }
 
 static int
-lwip_glue_getsockname(struct posix_socket_driver *d,
-          void *sock, struct sockaddr *restrict addr,
-          socklen_t *restrict addr_len)
+lwip_glue_getsockname(struct posix_socket_file *sock,
+          struct sockaddr *restrict addr, socklen_t *restrict addr_len)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
 
@@ -224,18 +215,17 @@ EXIT:
 }
 
 static int
-lwip_glue_getsockopt(struct posix_socket_driver *d,
-          void *sock, int level, int optname, void *restrict optval,
-          socklen_t *restrict optlen)
+lwip_glue_getsockopt(struct posix_socket_file *sock, int level, int optname, 
+          void *restrict optval, socklen_t *restrict optlen)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
 
@@ -249,18 +239,17 @@ EXIT:
 }
 
 static int
-lwip_glue_setsockopt(struct posix_socket_driver *d,
-          void *sock, int level, int optname, const void *optval,
-          socklen_t optlen)
+lwip_glue_setsockopt(struct posix_socket_file *sock, int level, int optname, 
+          const void *optval, socklen_t optlen)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
 
@@ -274,18 +263,17 @@ EXIT:
 }
 
 static int
-lwip_glue_connect(struct posix_socket_driver *d,
-          void *sock, const struct sockaddr *addr,
+lwip_glue_connect(struct posix_socket_file *sock, const struct sockaddr *addr,
           socklen_t addr_len)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
 
@@ -299,17 +287,16 @@ EXIT:
 }
 
 static int
-lwip_glue_listen(struct posix_socket_driver *d,
-          void *sock, int backlog)
+lwip_glue_listen(struct posix_socket_file *sock, int backlog)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
   
@@ -323,17 +310,16 @@ EXIT:
 }
 
 static ssize_t
-lwip_glue_recv(struct posix_socket_driver *d,
-          void *sock, void *buf, size_t len, int flags)
+lwip_glue_recv(struct posix_socket_file *sock, void *buf, size_t len, int flags)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
 
@@ -348,18 +334,18 @@ EXIT:
 }
 
 static ssize_t
-lwip_glue_recvfrom(struct posix_socket_driver *d,
-          void *sock, void *restrict buf, size_t len, int flags,
-          struct sockaddr *from, socklen_t *restrict fromlen)
+lwip_glue_recvfrom(struct posix_socket_file *sock, void *restrict buf,
+          size_t len, int flags, struct sockaddr *from,
+          socklen_t *restrict fromlen)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
 
@@ -373,17 +359,16 @@ EXIT:
 }
 
 static ssize_t
-lwip_glue_recvmsg(struct posix_socket_driver *d,
-          void *sock, struct msghdr *msg, int flags)
+lwip_glue_recvmsg(struct posix_socket_file *sock, struct msghdr *msg, int flags)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
 
@@ -397,17 +382,17 @@ EXIT:
 }
 
 static ssize_t
-lwip_glue_send(struct posix_socket_driver *d,
-          void *sock, const void *buf, size_t len, int flags)
+lwip_glue_send(struct posix_socket_file *sock, const void *buf, size_t len,
+          int flags)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
 
@@ -421,17 +406,17 @@ EXIT:
 }
 
 static ssize_t
-lwip_glue_sendmsg(struct posix_socket_driver *d,
-          void *sock, const struct msghdr *msg, int flags)
+lwip_glue_sendmsg(struct posix_socket_file *sock, const struct msghdr *msg,
+          int flags)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
 
@@ -445,18 +430,17 @@ EXIT:
 }
 
 static ssize_t
-lwip_glue_sendto(struct posix_socket_driver *d,
-          void *sock, const void *buf, size_t len, int flags,
-          const struct sockaddr *dest_addr, socklen_t addrlen)
+lwip_glue_sendto(struct posix_socket_file *sock, const void *buf, size_t len,
+          int flags, const struct sockaddr *dest_addr, socklen_t addrlen)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
 
@@ -470,17 +454,16 @@ EXIT:
 }
 
 static int
-lwip_glue_read(struct posix_socket_driver *d,
-          void *sock, void *buf, size_t count)
+lwip_glue_read(struct posix_socket_file *sock, void *buf, size_t count)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
   
@@ -494,17 +477,16 @@ EXIT:
 }
 
 static int
-lwip_glue_write(struct posix_socket_driver *d,
-          void *sock, const void *buf, size_t count)
+lwip_glue_write(struct posix_socket_file *sock, const void *buf, size_t count)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
   
@@ -518,17 +500,16 @@ EXIT:
 }
 
 static int
-lwip_glue_close(struct posix_socket_driver *d,
-          void *sock)
+lwip_glue_close(struct posix_socket_file *sock)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
 
@@ -542,17 +523,16 @@ EXIT:
 }
 
 static int
-lwip_glue_ioctl(struct posix_socket_driver *d,
-          void *sock, int request, void *argp)
+lwip_glue_ioctl(struct posix_socket_file *sock, int request, void *argp)
 {
   int ret = 0;
   struct lwip_socket *lwip_sock;
 
   /* Transform the socket descriptor to the lwip_socket pointer. */
-  lwip_sock = (struct lwip_socket *)sock;
+  lwip_sock = (struct lwip_socket *)sock->sock_data;
   if (lwip_sock->lwip_fd < 0) {
     ret = -1;
-    SOCKET_LIB_ERR(d, ret, "failed to identify socket descriptor");
+    SOCKET_LIB_ERR(sock->driver, ret, "failed to identify socket descriptor");
     goto EXIT;
   }
 
@@ -566,8 +546,6 @@ EXIT:
 }
 
 static struct posix_socket_ops lwip_socket_ops = {
-  /* The initialization function on socket registration. */
-  .init        = lwip_lib_socket_init,
   /* POSIX interfaces */
   .create      = lwip_glue_create,
   .accept      = lwip_glue_accept,
@@ -592,7 +570,7 @@ static struct posix_socket_ops lwip_socket_ops = {
   .ioctl       = lwip_glue_ioctl,
 };
 
-POSIX_SOCKET_FAMILY_REGISTER(AF_INET,  &lwip_socket_ops, NULL);
+POSIX_SOCKET_FAMILY_REGISTER(AF_INET, &lwip_socket_ops, NULL);
 
 #ifdef CONFIG_LWIP_IPV6
 POSIX_SOCKET_FAMILY_REGISTER(AF_INET6, &lwip_socket_ops, NULL);
