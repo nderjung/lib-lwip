@@ -121,6 +121,10 @@ config LWIP_UDP
 	bool "UDP support"
 	default y
 
+menuconfig LWIP_RAW
+	bool "RAW support"
+	default n
+
 menuconfig LWIP_TCP
 	bool "TCP support"
 	default y
